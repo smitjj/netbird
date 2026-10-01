@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import type { PeerStatus } from "@bindings/services/models.js";
 import { cn } from "@/lib/cn";
+import { copyText } from "@/lib/clipboard";
 import { CopyToClipboard } from "@/components/CopyToClipboard";
 import { Tooltip } from "@/components/Tooltip";
 import { TruncatedText } from "@/components/TruncatedText";
@@ -511,7 +512,7 @@ const ResourceRow = ({ value }: { value: string }) => {
     const handleClick = async () => {
         if (!value) return;
         try {
-            await navigator.clipboard.writeText(value);
+            await copyText(value);
             setCopied(true);
             setTimeout(() => setCopied(false), 500);
         } catch (e) {

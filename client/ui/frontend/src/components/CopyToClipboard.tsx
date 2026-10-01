@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { useTranslation } from "react-i18next";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { copyText } from "@/lib/clipboard";
 
 const VARIANT_HOVER = {
     default: "group-hover/copy:[&_*]:text-nb-gray-300",
@@ -58,7 +59,7 @@ export const CopyToClipboard = ({
         const text = message ?? wrapperRef.current?.innerText ?? "";
         if (!text) return;
         try {
-            await navigator.clipboard.writeText(text);
+            await copyText(text);
             setCopied(true);
             if (copyTimer.current) clearTimeout(copyTimer.current);
             copyTimer.current = setTimeout(() => setCopied(false), 500);

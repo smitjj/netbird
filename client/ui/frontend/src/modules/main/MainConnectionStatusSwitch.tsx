@@ -15,6 +15,7 @@ import {
 import { CopyToClipboard } from "@/components/CopyToClipboard";
 import { TruncatedText } from "@/components/TruncatedText";
 import { shortenDns } from "@/lib/formatters";
+import { copyText } from "@/lib/clipboard";
 import { contentTop } from "@/components/empty-state/EmptyState";
 import { useFocusVisible } from "@/hooks/useFocusVisible";
 import { Check as CheckIcon, ChevronDownIcon, Copy as CopyIcon } from "lucide-react";
@@ -383,7 +384,7 @@ const IpRow = ({ value }: { value: string }) => {
     const handleClick = async () => {
         if (!value) return;
         try {
-            await navigator.clipboard.writeText(value);
+            await copyText(value);
             setCopied(true);
             setTimeout(() => setCopied(false), 500);
         } catch (e) {

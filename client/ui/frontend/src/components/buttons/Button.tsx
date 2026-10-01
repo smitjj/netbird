@@ -3,6 +3,7 @@ import { Check, Copy, Loader2 } from "lucide-react";
 import { type ButtonHTMLAttributes, forwardRef, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
+import { copyText } from "@/lib/clipboard";
 
 type ButtonVariants = VariantProps<typeof buttonVariants>;
 
@@ -167,8 +168,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
                     return;
                 }
                 if (copy !== undefined) {
-                    void navigator.clipboard
-                        .writeText(copy)
+                    void copyText(copy)
                         .then(() => {
                             setCopied(true);
                             if (copyTimer.current) clearTimeout(copyTimer.current);

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
+import { copyText } from "@/lib/clipboard";
 import { Label } from "@/components/typography/Label";
 
 type InputVariants = VariantProps<typeof inputVariants>;
@@ -292,7 +293,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         const text = props.value == null ? (internalRef.current?.value ?? "") : String(props.value);
         if (!text) return;
         try {
-            await navigator.clipboard.writeText(text);
+            await copyText(text);
             setCopied(true);
             if (copyTimer.current) clearTimeout(copyTimer.current);
             copyTimer.current = setTimeout(() => setCopied(false), 1500);
