@@ -274,6 +274,11 @@ func (mgr *Manager) hostPolicy(_ context.Context, host string) error {
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}
+	// Wildcard certificates need DNS-01, which this manager does not perform.
+	// Refusing here keeps a client-sent wildcard SNI from starting an order.
+	if strings.Contains(host, "*") {
+		return fmt.Errorf("wildcard domain %q cannot be issued via ACME", host)
+	}
 	mgr.mu.RLock()
 	_, exists := mgr.domains[domain.Domain(host)]
 	mgr.mu.RUnlock()
@@ -296,14 +301,19 @@ func (mgr *Manager) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate
 
 // AddDomain registers a domain for certificate management. Domains that
 // match a loaded wildcard are marked ready immediately (they use the
-// static wildcard certificate) and the method returns true. All other
-// domains go through ACME prefetch and the method returns false.
+// static wildcard certificate) and the method returns true. A wildcard
+// service pattern is ready only when a loaded certificate carries the same
+// pattern; it never goes through ACME. All other domains go through ACME
+// prefetch and the method returns false.
 //
 // When AddDomain returns true the caller is responsible for sending any
 // certificate-ready notifications after the surrounding operation (e.g.
 // mapping update) has committed successfully.
 func (mgr *Manager) AddDomain(d domain.Domain, accountID types.AccountID, serviceID types.ServiceID) (wildcardHit bool) {
 	name := d.PunycodeString()
+	if domain.IsWildcard(name) {
+		return mgr.addWildcardPattern(d, accountID, serviceID)
+	}
 	if e := mgr.findWildcardEntry(name); e != nil {
 		mgr.mu.Lock()
 		mgr.domains[d] = &domainInfo{
@@ -326,6 +336,37 @@ func (mgr *Manager) AddDomain(d domain.Domain, accountID types.AccountID, servic
 
 	go mgr.prefetchCertificate(d)
 	return false
+}
+
+// addWildcardPattern registers a wildcard service pattern. It is ready when a
+// static certificate in the wildcard directory carries exactly this pattern,
+// and failed otherwise, since ACME here cannot issue wildcard certificates.
+func (mgr *Manager) addWildcardPattern(d domain.Domain, accountID types.AccountID, serviceID types.ServiceID) bool {
+	name := strings.ToLower(d.PunycodeString())
+	covered := slices.ContainsFunc(mgr.wildcards, func(e wildcardEntry) bool {
+		return strings.EqualFold(e.pattern, name)
+	})
+
+	info := &domainInfo{
+		accountID: accountID,
+		serviceID: serviceID,
+		state:     domainReady,
+	}
+	if !covered {
+		info.state = domainFailed
+		info.err = "no static wildcard certificate covers this pattern; ACME requires DNS-01 for wildcards"
+	}
+
+	mgr.mu.Lock()
+	mgr.domains[d] = info
+	mgr.mu.Unlock()
+
+	if !covered {
+		mgr.logger.Warnf("wildcard domain %q has no matching certificate in the wildcard certificate directory; TLS for matching hosts will fail", name)
+		return false
+	}
+	mgr.logger.Debugf("wildcard domain %q served by static wildcard certificate", name)
+	return true
 }
 
 // prefetchCertificate proactively triggers certificate generation for a domain.

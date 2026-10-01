@@ -1926,6 +1926,20 @@ func (mr *MockStoreMockRecorder) GetClusterSupportsPrivate(ctx, clusterAddr any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSupportsPrivate", reflect.TypeOf((*MockStore)(nil).GetClusterSupportsPrivate), ctx, clusterAddr)
 }
 
+// GetClusterSupportsWildcardDomains mocks base method.
+func (m *MockStore) GetClusterSupportsWildcardDomains(ctx context.Context, clusterAddr string) *bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClusterSupportsWildcardDomains", ctx, clusterAddr)
+	ret0, _ := ret[0].(*bool)
+	return ret0
+}
+
+// GetClusterSupportsWildcardDomains indicates an expected call of GetClusterSupportsWildcardDomains.
+func (mr *MockStoreMockRecorder) GetClusterSupportsWildcardDomains(ctx, clusterAddr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterSupportsWildcardDomains", reflect.TypeOf((*MockStore)(nil).GetClusterSupportsWildcardDomains), ctx, clusterAddr)
+}
+
 // GetCustomDomain mocks base method.
 func (m *MockStore) GetCustomDomain(ctx context.Context, accountID, domainID string) (*domain.Domain, error) {
 	m.ctrl.T.Helper()

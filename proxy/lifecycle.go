@@ -105,6 +105,9 @@ type Config struct {
 	// RequireSubdomain forces accounts to use a subdomain in front of
 	// the proxy's cluster domain.
 	RequireSubdomain bool
+	// AllowWildcardServices lets accounts create public services on
+	// wildcard domains such as *.example.com.
+	AllowWildcardServices bool
 	// Private flags this proxy as embedded in a netbird client and
 	// serving exclusively over the WireGuard tunnel. Also enables
 	// per-account inbound listeners on each embedded client's netstack.
@@ -165,6 +168,7 @@ func New(ctx context.Context, cfg Config) *Server {
 		Performance:              cfg.Performance,
 		SupportsCustomPorts:      cfg.SupportsCustomPorts,
 		RequireSubdomain:         cfg.RequireSubdomain,
+		AllowWildcardServices:    cfg.AllowWildcardServices,
 		Private:                  cfg.Private,
 		MaxDialTimeout:           cfg.MaxDialTimeout,
 		MaxSessionIdleTimeout:    cfg.MaxSessionIdleTimeout,

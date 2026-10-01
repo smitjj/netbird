@@ -219,6 +219,9 @@ type Server struct {
 	// in front of this proxy's cluster domain. When true, accounts cannot
 	// create services on the bare cluster domain.
 	RequireSubdomain bool
+	// AllowWildcardServices accepts public service mappings on wildcard
+	// domains (*.example.com) and is reported upstream as a capability.
+	AllowWildcardServices bool
 	// Private flags this proxy as embedded in a netbird client and serving
 	// exclusively over the WireGuard tunnel (i.e. `netbird proxy`). Reported
 	// upstream as a capability so dashboards can distinguish per-peer
@@ -1290,11 +1293,12 @@ func (s *Server) proxyCapabilities() *proto.ProxyCapabilities {
 	// Always true: this build enforces ProxyMapping.private via the auth middleware.
 	supportsPrivateService := true
 	return &proto.ProxyCapabilities{
-		SupportsCustomPorts:    &s.SupportsCustomPorts,
-		RequireSubdomain:       &s.RequireSubdomain,
-		SupportsCrowdsec:       &supportsCrowdSec,
-		Private:                &privateCapability,
-		SupportsPrivateService: &supportsPrivateService,
+		SupportsCustomPorts:     &s.SupportsCustomPorts,
+		RequireSubdomain:        &s.RequireSubdomain,
+		SupportsCrowdsec:        &supportsCrowdSec,
+		Private:                 &privateCapability,
+		SupportsPrivateService:  &supportsPrivateService,
+		SupportsWildcardDomains: &s.AllowWildcardServices,
 	}
 }
 
@@ -1662,6 +1666,9 @@ func (s *Server) modifyMapping(ctx context.Context, mapping *proto.ProxyMapping)
 // setupMappingRoutes configures the appropriate routes or relays for the given
 // service mapping based on its mode. The NetBird peer must already exist.
 func (s *Server) setupMappingRoutes(ctx context.Context, mapping *proto.ProxyMapping) error {
+	if err := s.checkWildcardMapping(mapping); err != nil {
+		return err
+	}
 	switch types.ServiceMode(mapping.GetMode()) {
 	case types.ServiceModeTCP:
 		return s.setupTCPMapping(ctx, mapping)
@@ -1672,6 +1679,37 @@ func (s *Server) setupMappingRoutes(ctx context.Context, mapping *proto.ProxyMap
 	default:
 		return s.setupHTTPMapping(ctx, mapping)
 	}
+}
+
+// checkWildcardMapping rejects a wildcard-domain mapping unless this proxy
+// allows wildcard services and the mapping is a public HTTP service.
+// Management enforces the same rules; checking here as well keeps an older
+// management from routing a pattern the proxy cannot authenticate.
+func (s *Server) checkWildcardMapping(mapping *proto.ProxyMapping) error {
+	d := mapping.GetDomain()
+	if !domain.IsWildcard(d) {
+		return nil
+	}
+	if !s.AllowWildcardServices {
+		return fmt.Errorf("wildcard domain %s: wildcard services are not enabled on this proxy", d)
+	}
+	if err := domain.ValidateWildcard(d); err != nil {
+		return fmt.Errorf("domain %s: %w", d, err)
+	}
+	if mode := types.ServiceMode(mapping.GetMode()); mode != "" && mode != types.ServiceModeHTTP {
+		return fmt.Errorf("wildcard domain %s: mode %q is not supported", d, mode)
+	}
+	if mappingHasAuth(mapping) {
+		return fmt.Errorf("wildcard domain %s: authentication and private access are not supported", d)
+	}
+	return nil
+}
+
+// mappingHasAuth reports whether the mapping enables any authentication
+// scheme or private (tunnel-peer) access.
+func mappingHasAuth(mapping *proto.ProxyMapping) bool {
+	a := mapping.GetAuth()
+	return mapping.GetPrivate() || a.GetPassword() || a.GetPin() || a.GetOidc() || len(a.GetHeaderAuths()) > 0
 }
 
 // setupHTTPMapping configures HTTP reverse proxy, auth, and ACME routes.

@@ -78,6 +78,7 @@ var (
 	preSharedKey          string
 	supportsCustomPorts   bool
 	requireSubdomain      bool
+	allowWildcardServices bool
 	private               bool
 	geoDataDir            string
 	crowdsecAPIURL        string
@@ -121,6 +122,7 @@ func init() {
 	rootCmd.Flags().StringVar(&preSharedKey, "preshared-key", envStringOrDefault("NB_PROXY_PRESHARED_KEY", ""), "Define a pre-shared key for the tunnel between proxy and peers")
 	rootCmd.Flags().BoolVar(&supportsCustomPorts, "supports-custom-ports", envBoolOrDefault("NB_PROXY_SUPPORTS_CUSTOM_PORTS", true), "Whether the proxy can bind arbitrary ports for UDP/TCP passthrough")
 	rootCmd.Flags().BoolVar(&requireSubdomain, "require-subdomain", envBoolOrDefault("NB_PROXY_REQUIRE_SUBDOMAIN", false), "Require a subdomain label in front of the cluster domain")
+	rootCmd.Flags().BoolVar(&allowWildcardServices, "allow-wildcard-services", envBoolOrDefault("NB_PROXY_ALLOW_WILDCARD_SERVICES", false), "Allow public services on wildcard domains (*.example.com). TLS needs a matching certificate in the wildcard certificate directory. Do not enable on a cluster shared by untrusted accounts")
 	rootCmd.Flags().BoolVar(&private, "private", envBoolOrDefault("NB_PROXY_PRIVATE", false), "Enable private services accessible with NetBird-Only authentication mode.")
 	_ = rootCmd.Flags().MarkHidden("private")
 	rootCmd.Flags().DurationVar(&maxDialTimeout, "max-dial-timeout", envDurationOrDefault("NB_PROXY_MAX_DIAL_TIMEOUT", 0), "Cap per-service backend dial timeout (0 = no cap)")
@@ -253,6 +255,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 		PreSharedKey:             preSharedKey,
 		SupportsCustomPorts:      supportsCustomPorts,
 		RequireSubdomain:         requireSubdomain,
+		AllowWildcardServices:    allowWildcardServices,
 		Private:                  private,
 		MaxDialTimeout:           maxDialTimeout,
 		MaxSessionIdleTimeout:    maxSessionIdleTimeout,

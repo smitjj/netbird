@@ -18,6 +18,7 @@ type Manager interface {
 	GetActiveClusterAddressesForAccount(ctx context.Context, accountID string) ([]string, error)
 	ClusterSupportsCustomPorts(ctx context.Context, clusterAddr string) *bool
 	ClusterRequireSubdomain(ctx context.Context, clusterAddr string) *bool
+	ClusterSupportsWildcardDomains(ctx context.Context, clusterAddr string) *bool
 	ClusterSupportsCrowdSec(ctx context.Context, clusterAddr string) *bool
 	ClusterSupportsPrivate(ctx context.Context, clusterAddr string) *bool
 	ClusterSupportsSessionCode(ctx context.Context, clusterAddr string) bool

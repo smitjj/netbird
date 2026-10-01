@@ -99,6 +99,9 @@ func (m *mockStore) GetClusterSupportsCustomPorts(_ context.Context, _ string) *
 func (m *mockStore) GetClusterRequireSubdomain(_ context.Context, _ string) *bool {
 	return nil
 }
+func (m *mockStore) GetClusterSupportsWildcardDomains(_ context.Context, _ string) *bool {
+	return nil
+}
 func (m *mockStore) GetClusterSupportsCrowdSec(_ context.Context, _ string) *bool {
 	return nil
 }

@@ -126,6 +126,20 @@ func (mr *MockManagerMockRecorder) ClusterSupportsSessionCode(ctx, clusterAddr a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterSupportsSessionCode", reflect.TypeOf((*MockManager)(nil).ClusterSupportsSessionCode), ctx, clusterAddr)
 }
 
+// ClusterSupportsWildcardDomains mocks base method.
+func (m *MockManager) ClusterSupportsWildcardDomains(ctx context.Context, clusterAddr string) *bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterSupportsWildcardDomains", ctx, clusterAddr)
+	ret0, _ := ret[0].(*bool)
+	return ret0
+}
+
+// ClusterSupportsWildcardDomains indicates an expected call of ClusterSupportsWildcardDomains.
+func (mr *MockManagerMockRecorder) ClusterSupportsWildcardDomains(ctx, clusterAddr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterSupportsWildcardDomains", reflect.TypeOf((*MockManager)(nil).ClusterSupportsWildcardDomains), ctx, clusterAddr)
+}
+
 // Connect mocks base method.
 func (m *MockManager) Connect(ctx context.Context, proxyID, sessionID, clusterAddress, ipAddress, version string, accountID *string, capabilities *Capabilities) (*Proxy, error) {
 	m.ctrl.T.Helper()

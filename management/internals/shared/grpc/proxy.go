@@ -580,10 +580,11 @@ func (s *ProxyServiceServer) registerProxyConnection(ctx context.Context, params
 	var caps *proxy.Capabilities
 	if c := params.capabilities; c != nil {
 		caps = &proxy.Capabilities{
-			SupportsCustomPorts: c.SupportsCustomPorts,
-			RequireSubdomain:    c.RequireSubdomain,
-			SupportsCrowdsec:    c.SupportsCrowdsec,
-			Private:             c.Private,
+			SupportsCustomPorts:     c.SupportsCustomPorts,
+			RequireSubdomain:        c.RequireSubdomain,
+			SupportsCrowdsec:        c.SupportsCrowdsec,
+			Private:                 c.Private,
+			SupportsWildcardDomains: c.SupportsWildcardDomains,
 		}
 	}
 
@@ -1163,6 +1164,9 @@ func proxyAcceptsMapping(conn *proxyConnection, mapping *proto.ProxyMapping) boo
 		if caps == nil || caps.SupportsPrivateService == nil || !*caps.SupportsPrivateService {
 			return false
 		}
+	}
+	if domain.IsWildcard(mapping.GetDomain()) && !conn.capabilities.GetSupportsWildcardDomains() {
+		return false
 	}
 	if mapping.ListenPort == 0 || mapping.Mode == "tls" {
 		return true

@@ -9,6 +9,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -27,6 +28,7 @@ import (
 	"github.com/netbirdio/netbird/management/server/permissions/operations"
 	"github.com/netbirdio/netbird/management/server/store"
 	"github.com/netbirdio/netbird/management/server/types"
+	nbdomain "github.com/netbirdio/netbird/shared/management/domain"
 	"github.com/netbirdio/netbird/shared/management/status"
 )
 
@@ -82,6 +84,7 @@ type ClusterDeriver interface {
 type CapabilityProvider interface {
 	ClusterSupportsCustomPorts(ctx context.Context, clusterAddr string) *bool
 	ClusterRequireSubdomain(ctx context.Context, clusterAddr string) *bool
+	ClusterSupportsWildcardDomains(ctx context.Context, clusterAddr string) *bool
 	ClusterSupportsCrowdSec(ctx context.Context, clusterAddr string) *bool
 	ClusterSupportsPrivate(ctx context.Context, clusterAddr string) *bool
 }
@@ -287,6 +290,9 @@ func (m *Manager) initializeServiceForCreate(ctx context.Context, accountID stri
 			return err
 		}
 	}
+	if err := m.validateWildcardSupport(ctx, service.Domain, service.ProxyCluster); err != nil {
+		return err
+	}
 
 	service.AccountID = accountID
 	service.InitNewRecord()
@@ -321,6 +327,27 @@ func (m *Manager) validateSubdomainRequirement(ctx context.Context, domain, clus
 	requireSub := m.capabilities.ClusterRequireSubdomain(ctx, cluster)
 	if requireSub != nil && *requireSub {
 		return status.Errorf(status.InvalidArgument, "domain %s requires a subdomain label", domain)
+	}
+	return nil
+}
+
+// validateWildcardSupport accepts a wildcard domain only on a cluster whose
+// every active proxy allows wildcard services. A wildcard captures every
+// unclaimed name beneath it, so on a cluster shared between accounts the
+// proxy operator has to opt in explicitly.
+func (m *Manager) validateWildcardSupport(ctx context.Context, domain, cluster string) error {
+	if !strings.Contains(domain, "*") {
+		return nil
+	}
+	if err := nbdomain.ValidateWildcard(domain); err != nil {
+		return status.Errorf(status.InvalidArgument, "invalid domain %s: %v", domain, err)
+	}
+	if cluster == "" || m.capabilities == nil {
+		return status.Errorf(status.PreconditionFailed, "wildcard domain %s requires a proxy cluster that allows wildcard services", domain)
+	}
+	supported := m.capabilities.ClusterSupportsWildcardDomains(ctx, cluster)
+	if supported == nil || !*supported {
+		return status.Errorf(status.PreconditionFailed, "proxy cluster %s does not allow wildcard services; every proxy in it must run with NB_PROXY_ALLOW_WILDCARD_SERVICES=true", cluster)
 	}
 	return nil
 }
@@ -589,6 +616,9 @@ func (m *Manager) persistServiceUpdate(ctx context.Context, accountID string, se
 	// pool would self-deadlock if this ran while the tx already held the only
 	// connection.
 	if err := m.validateSubdomainRequirement(ctx, service.Domain, effectiveCluster); err != nil {
+		return nil, err
+	}
+	if err := m.validateWildcardSupport(ctx, service.Domain, effectiveCluster); err != nil {
 		return nil, err
 	}
 

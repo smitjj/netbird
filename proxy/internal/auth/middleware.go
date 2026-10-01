@@ -22,6 +22,7 @@ import (
 	"github.com/netbirdio/netbird/proxy/internal/restrict"
 	"github.com/netbirdio/netbird/proxy/internal/types"
 	"github.com/netbirdio/netbird/proxy/web"
+	nbdomain "github.com/netbirdio/netbird/shared/management/domain"
 	"github.com/netbirdio/netbird/shared/management/proto"
 )
 
@@ -210,8 +211,7 @@ func (mw *Middleware) blockOIDCOnPlainHTTP(w http.ResponseWriter, r *http.Reques
 func (mw *Middleware) getDomainConfig(host string) (DomainConfig, bool) {
 	mw.domainsMux.RLock()
 	defer mw.domainsMux.RUnlock()
-	config, exists := mw.domains[host]
-	return config, exists
+	return nbdomain.LookupHost(mw.domains, host)
 }
 
 func setCapturedIDs(r *http.Request, config DomainConfig) {
@@ -670,6 +670,11 @@ func wasCredentialSubmitted(r *http.Request, method auth.Method) bool {
 // private=true forces ValidateTunnelPeer enforcement (403 on failure) regardless of the schemes list.
 // allowedGroups restricts OIDC sessions to the given group ids; empty means unrestricted.
 func (mw *Middleware) AddDomain(domain string, schemes []Scheme, publicKeyB64 string, expiration time.Duration, accountID types.AccountID, serviceID types.ServiceID, ipRestrictions *restrict.Filter, private bool, allowedGroups []string) error {
+	// Sessions, OIDC redirects and tunnel-peer checks are bound to the exact
+	// host, so a wildcard can only front a public service.
+	if nbdomain.IsWildcard(domain) && (len(schemes) > 0 || private) {
+		return fmt.Errorf("wildcard domain %s does not support authentication or private access", domain)
+	}
 	if len(schemes) == 0 {
 		mw.domainsMux.Lock()
 		defer mw.domainsMux.Unlock()

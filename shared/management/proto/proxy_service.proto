@@ -73,6 +73,8 @@ message ProxyCapabilities {
   optional bool private = 4;
   // Whether the proxy enforces ProxyMapping.private (fails closed on ValidateTunnelPeer failure). Management MUST NOT stream private mappings to proxies that don't claim this.
   optional bool supports_private_service = 5;
+  // Whether the operator allows wildcard service domains (*.example.com) on this proxy. Management MUST NOT accept or stream wildcard mappings for a cluster unless every active proxy claims this.
+  optional bool supports_wildcard_domains = 6;
 }
 
 // GetMappingUpdateRequest is sent to initialise a mapping stream.

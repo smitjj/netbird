@@ -16,6 +16,7 @@ import (
 	"github.com/netbirdio/netbird/proxy/internal/accesslog"
 	"github.com/netbirdio/netbird/proxy/internal/restrict"
 	"github.com/netbirdio/netbird/proxy/internal/types"
+	"github.com/netbirdio/netbird/shared/management/domain"
 	"github.com/netbirdio/netbird/util/netrelay"
 )
 
@@ -440,11 +441,12 @@ func (r *Router) handleUnmatched(ctx context.Context, conn net.Conn, isTLS bool)
 }
 
 // lookupRoute returns the highest-priority route for the given SNI host.
+// An exact host takes precedence over a wildcard pattern covering it, and
 // HTTP routes take precedence over TCP routes.
 func (r *Router) lookupRoute(host SNIHost) (Route, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	routes, ok := r.routes[host]
+	routes, ok := domain.LookupHost(r.routes, string(host))
 	if !ok || len(routes) == 0 {
 		return Route{}, false
 	}

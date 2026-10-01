@@ -22,6 +22,7 @@ import (
 	"github.com/netbirdio/netbird/shared/hash/argon2id"
 	"github.com/netbirdio/netbird/util/crypt"
 
+	nbdomain "github.com/netbirdio/netbird/shared/management/domain"
 	"github.com/netbirdio/netbird/shared/management/http/api"
 	"github.com/netbirdio/netbird/shared/management/proto"
 )
@@ -880,6 +881,9 @@ func (s *Service) Validate() error {
 	if err := s.validatePrivateRequirements(); err != nil {
 		return err
 	}
+	if err := s.validateWildcardDomain(); err != nil {
+		return err
+	}
 
 	switch s.Mode {
 	case ModeHTTP:
@@ -906,6 +910,28 @@ func (s *Service) validatePrivateRequirements() error {
 	}
 	if s.Auth.BearerAuth != nil && s.Auth.BearerAuth.Enabled {
 		return errors.New("private services cannot enable bearer auth (SSO): NetBird-only access and SSO are mutually exclusive")
+	}
+	return nil
+}
+
+// validateWildcardDomain restricts wildcard domains (*.example.com) to public
+// HTTP services, because sessions, OIDC redirects and tunnel-peer checks are
+// bound to the exact host.
+func (s *Service) validateWildcardDomain() error {
+	if !strings.Contains(s.Domain, "*") {
+		return nil
+	}
+	if err := nbdomain.ValidateWildcard(s.Domain); err != nil {
+		return fmt.Errorf("invalid domain %q: %w", s.Domain, err)
+	}
+	if s.Mode != ModeHTTP {
+		return fmt.Errorf("wildcard domains are only supported for HTTP services, got mode %q", s.Mode)
+	}
+	if s.Private {
+		return errors.New("wildcard domains do not support private services")
+	}
+	if s.isAuthEnabled() {
+		return errors.New("wildcard domains do not support authentication; disable SSO, password, PIN and header auth")
 	}
 	return nil
 }

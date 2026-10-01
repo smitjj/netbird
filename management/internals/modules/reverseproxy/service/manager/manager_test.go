@@ -1419,6 +1419,43 @@ func TestValidateSubdomainRequirement(t *testing.T) {
 	}
 }
 
+func TestValidateWildcardSupport(t *testing.T) {
+	ptrBool := func(b bool) *bool { return &b }
+	const cluster = "proxy.example.com"
+
+	tests := []struct {
+		name      string
+		domain    string
+		cluster   string
+		supported *bool
+		wantErr   string
+	}{
+		{name: "exact domain skips the check", domain: "app.proxy.example.com", cluster: cluster, supported: nil},
+		{name: "cluster allows wildcards", domain: "*.prototypes.proxy.example.com", cluster: cluster, supported: ptrBool(true)},
+		{name: "cluster disallows wildcards", domain: "*.prototypes.proxy.example.com", cluster: cluster, supported: ptrBool(false), wantErr: "does not allow wildcard services"},
+		{name: "cluster never reported the capability", domain: "*.prototypes.proxy.example.com", cluster: cluster, supported: nil, wantErr: "does not allow wildcard services"},
+		{name: "no cluster", domain: "*.prototypes.proxy.example.com", cluster: "", wantErr: "requires a proxy cluster"},
+		{name: "malformed wildcard", domain: "app.*.proxy.example.com", cluster: cluster, supported: ptrBool(true), wantErr: "invalid domain"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockCaps := proxy.NewMockManager(ctrl)
+			mockCaps.EXPECT().ClusterSupportsWildcardDomains(gomock.Any(), tc.cluster).Return(tc.supported).AnyTimes()
+
+			mgr := &Manager{capabilities: mockCaps}
+			err := mgr.validateWildcardSupport(context.Background(), tc.domain, tc.cluster)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
 func TestValidateTargetReferences_ClusterTargetSkipsLookup(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)

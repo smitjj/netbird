@@ -11,6 +11,7 @@ import (
 	"github.com/netbirdio/netbird/proxy/internal/middleware"
 	"github.com/netbirdio/netbird/proxy/internal/middleware/bodytap"
 	"github.com/netbirdio/netbird/proxy/internal/types"
+	"github.com/netbirdio/netbird/shared/management/domain"
 )
 
 // PathRewriteMode controls how the request path is rewritten before forwarding.
@@ -85,7 +86,7 @@ func (p *ReverseProxy) findTargetForRequest(req *http.Request) (targetResult, bo
 		host = h
 	}
 
-	m, exists := p.mappings[host]
+	m, exists := domain.LookupHost(p.mappings, host)
 	if !exists {
 		p.logger.Debugf("no mapping found for host: %s", host)
 		return targetResult{}, false

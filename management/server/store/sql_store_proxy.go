@@ -334,10 +334,11 @@ func (s *SqlStore) GetProxyClusters(ctx context.Context, accountID string) ([]pr
 const proxyActiveThreshold = 2 * time.Minute
 
 var validCapabilityColumns = map[string]struct{}{
-	"supports_custom_ports": {},
-	"require_subdomain":     {},
-	"supports_crowdsec":     {},
-	"private":               {},
+	"supports_custom_ports":     {},
+	"require_subdomain":         {},
+	"supports_crowdsec":         {},
+	"private":                   {},
+	"supports_wildcard_domains": {},
 }
 
 // GetClusterSupportsCustomPorts returns whether any active proxy in the cluster
@@ -350,6 +351,14 @@ func (s *SqlStore) GetClusterSupportsCustomPorts(ctx context.Context, clusterAdd
 // requires a subdomain. Returns nil when no proxy reported the capability.
 func (s *SqlStore) GetClusterRequireSubdomain(ctx context.Context, clusterAddr string) *bool {
 	return s.getClusterCapability(ctx, clusterAddr, "require_subdomain")
+}
+
+// GetClusterSupportsWildcardDomains returns whether all active proxies in the
+// cluster allow wildcard service domains. Returns nil when no proxy reported
+// the capability. Like CrowdSec it requires unanimous support: a proxy without
+// it would leave every host under the pattern unrouted.
+func (s *SqlStore) GetClusterSupportsWildcardDomains(ctx context.Context, clusterAddr string) *bool {
+	return s.getClusterUnanimousCapability(ctx, clusterAddr, "supports_wildcard_domains")
 }
 
 // GetClusterSupportsPrivate reports whether any active proxy in the cluster

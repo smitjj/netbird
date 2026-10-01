@@ -26,6 +26,9 @@ type Capabilities struct {
 	// Private indicates whether this proxy supports inbound access via Wireguard
 	// tunnel and netbird-only authentication policies
 	Private *bool
+	// SupportsWildcardDomains indicates whether the operator allows wildcard
+	// service domains (*.example.com) on this proxy.
+	SupportsWildcardDomains *bool
 }
 
 // Proxy represents a reverse proxy instance

@@ -626,6 +626,10 @@ func (m *testValidateSessionProxyManager) ClusterRequireSubdomain(_ context.Cont
 	return nil
 }
 
+func (m *testValidateSessionProxyManager) ClusterSupportsWildcardDomains(_ context.Context, _ string) *bool {
+	return nil
+}
+
 func (m *testValidateSessionProxyManager) ClusterSupportsCrowdSec(_ context.Context, _ string) *bool {
 	return nil
 }

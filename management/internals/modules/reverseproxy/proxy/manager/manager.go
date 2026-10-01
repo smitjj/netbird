@@ -21,6 +21,7 @@ type store interface {
 	GetProxyClusters(ctx context.Context, accountID string) ([]proxy.Cluster, error)
 	GetClusterSupportsCustomPorts(ctx context.Context, clusterAddr string) *bool
 	GetClusterRequireSubdomain(ctx context.Context, clusterAddr string) *bool
+	GetClusterSupportsWildcardDomains(ctx context.Context, clusterAddr string) *bool
 	GetClusterSupportsCrowdSec(ctx context.Context, clusterAddr string) *bool
 	GetClusterSupportsPrivate(ctx context.Context, clusterAddr string) *bool
 	GetActiveProxyVersions(ctx context.Context, clusterAddr string) ([]string, error)
@@ -136,6 +137,13 @@ func (m Manager) ClusterSupportsCustomPorts(ctx context.Context, clusterAddr str
 // requires a subdomain. Returns nil when no proxy has reported capabilities.
 func (m Manager) ClusterRequireSubdomain(ctx context.Context, clusterAddr string) *bool {
 	return m.store.GetClusterRequireSubdomain(ctx, clusterAddr)
+}
+
+// ClusterSupportsWildcardDomains returns whether all active proxies in the
+// cluster allow wildcard service domains. Returns nil when no proxy has
+// reported the capability.
+func (m Manager) ClusterSupportsWildcardDomains(ctx context.Context, clusterAddr string) *bool {
+	return m.store.GetClusterSupportsWildcardDomains(ctx, clusterAddr)
 }
 
 // ClusterSupportsCrowdSec returns whether all active proxies in the cluster
